@@ -22,7 +22,7 @@ public class EventLogger {
     private PreparedStatement pst;
     private PreparedStatement pstActualWorkedHours;
     private String selectUsersSql =
-        "select * from xx_e_portal_users where email_address is not null and emp_type is not null and person_id is not null";
+        "select * from xx_e_portal_users where email_address is not null and emp_type is not null and person_id ='4875'";
 
     public EventLogger() {
         dbH = new DatabaseHandler();
@@ -56,40 +56,40 @@ public class EventLogger {
 //                    {
                     String getPreviousDayRec = "select (TO_CHAR(max_out_time, 'hh12:MI AM')) outtime from xx_e_portal_emp_atd where TO_CHAR (ATTENDANCE_DATE, 'MON-DD-YYYY') = ? and emp_id = ?";
                     
-                    String formattedDateParam =
-                        new DateFormatSymbols().getShortMonths()[date.get(Calendar.MONTH)].toUpperCase() +
-                        "-" +
-                        (date.get(Calendar.DAY_OF_MONTH) <= 9 ? "0" + date.get(Calendar.DAY_OF_MONTH) :
-                         date.get(Calendar.DAY_OF_MONTH)) + "-" +
-                        Calendar.getInstance().get(Calendar.YEAR);
-                    
-                    Calendar pc = Calendar.getInstance();
-                    pc.setTime(date.getTime());
-                    pc.add(Calendar.DAY_OF_MONTH, -1);
-                    String formattedPreviousDateParam =
-                        new DateFormatSymbols().getShortMonths()[pc.get(Calendar.MONTH)].toUpperCase() +
-                        "-" +
-                        ((pc.get(Calendar.DAY_OF_MONTH)) <= 9 ? "0" + (pc.get(Calendar.DAY_OF_MONTH)) :
-                         (pc.get(Calendar.DAY_OF_MONTH))) + "-" +
-                        pc.get(Calendar.YEAR);
-                        //int i = 1;
-                    
-//                        String formattedDateParam =
-//                        "FEB" +
+//                    String formattedDateParam =
+//                        new DateFormatSymbols().getShortMonths()[date.get(Calendar.MONTH)].toUpperCase() +
 //                        "-" +
-//                        (i <= 9 ? "0" + i :
-//                         i) + "-" +
-//                        "2016";
+//                        (date.get(Calendar.DAY_OF_MONTH) <= 9 ? "0" + date.get(Calendar.DAY_OF_MONTH) :
+//                         date.get(Calendar.DAY_OF_MONTH)) + "-" +
+//                        Calendar.getInstance().get(Calendar.YEAR);
 //                    
 //                    Calendar pc = Calendar.getInstance();
 //                    pc.setTime(date.getTime());
-//                    //pc.add(Calendar.DAY_OF_MONTH, -1);
+//                    pc.add(Calendar.DAY_OF_MONTH, -1);
 //                    String formattedPreviousDateParam =
-//                        "FEB" +
+//                        new DateFormatSymbols().getShortMonths()[pc.get(Calendar.MONTH)].toUpperCase() +
 //                        "-" +
-//                        ((i-1) <= 9 ? "0" + (i-1) :
-//                         (i-1)) + "-" +
-//                        "2016";
+//                        ((pc.get(Calendar.DAY_OF_MONTH)) <= 9 ? "0" + (pc.get(Calendar.DAY_OF_MONTH)) :
+//                         (pc.get(Calendar.DAY_OF_MONTH))) + "-" +
+//                        pc.get(Calendar.YEAR);
+                        int i = 10;
+                    
+                        String formattedDateParam =
+                        "FEB" +
+                        "-" +
+                        (i <= 9 ? "0" + i :
+                         i) + "-" +
+                        "2016";
+                    
+                    Calendar pc = Calendar.getInstance();
+                    pc.setTime(date.getTime());
+                    //pc.add(Calendar.DAY_OF_MONTH, -1);
+                    String formattedPreviousDateParam =
+                        "FEB" +
+                        "-" +
+                        ((i-1) <= 9 ? "0" + (i-1) :
+                         (i-1)) + "-" +
+                        "2016";
                     
                     //GETTING PREVIOUS DAY OUT TIME
                     pst = ebsConn.prepareStatement(getPreviousDayRec);
@@ -126,8 +126,10 @@ public class EventLogger {
                         String description =
                             rsAttendance.getString("DESCRIPTION");
                         String dayDescription = rsAttendance.getString("DAY");
-                        System.out.println("Day description = "+dayDescription);
-                        System.out.println("Description: "+description);
+                        String leaveToday = rsAttendance.getString("LEAVE_TODAY");
+                        String leaveType = rsAttendance.getString("LEAVE_TYPE");
+                        System.out.println("Leave Type = "+leaveType);
+                        System.out.println("Leave Today = "+leaveToday);
                         l.logInfo("Description: "+description);
                         if (description==null && dayDescription.trim().equals("SUNDAY"))
                         {
@@ -194,6 +196,10 @@ public class EventLogger {
                         if (description.equals("Independence Day") || description.equals("Eid Holiday") || description.equals("Public Holiday") || description.equals("SATURDAY_OFF") || description.equals("Ashura") || dayDescription.trim().equals("SUNDAY")) {
                             System.out.println("It's not a regular day so not logging anything.");
                             l.logInfo("It's not a regular day so not logging anything.");
+                        }
+                        else if (leaveToday.equals("Y") && leaveType.equals("7")) 
+                        {
+                                System.out.println("Employee is travelling");
                         }
                         else
                         {
