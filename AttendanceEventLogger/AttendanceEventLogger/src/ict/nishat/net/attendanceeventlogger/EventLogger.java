@@ -22,7 +22,7 @@ public class EventLogger {
     private PreparedStatement pst;
     private PreparedStatement pstActualWorkedHours;
     private String selectUsersSql =
-        "select * from xx_e_portal_users where email_address is not null and emp_type is not null and person_id ='4875'";
+        "select * from xx_e_portal_users where email_address is not null and emp_type is not null and person_id is not null";
 
     public EventLogger() {
         dbH = new DatabaseHandler();
@@ -34,6 +34,8 @@ public class EventLogger {
             /**LOAD ORACLE DATABASE DRIVERS AND CONNECT TO EBS DATABASE*/
             dbH.loadDrivers();
             ebsConn = dbH.connectDB();
+            if (ebsConn == null)
+              CommonUtil.log("ebs conn is null");
             /**LOAD ALL EMPOYEES FROM EBS AND LOG EVENTS FOR EACH OF THEM,ONE BY ONE*/
             ResultSet rsUsers = getAllUsers();
             rsUsers.last();
@@ -48,61 +50,62 @@ public class EventLogger {
                     l.logInfo("Processing Irregularities of user:"+userID+" of date: "+date.getTime().toString()+"\n");
                     
                     String query= "select v.*,LAG (Effective_WORKed_HOURS, 1, NULL)OVER (ORDER BY attendance_Date) previous_day_effective_hours,LAG (TO_CHAR (max_out_time, 'hh12:MI AM'), 1, NULL) OVER (ORDER BY attendance_date)"
-                       +"previous_day_out_time from XX_E_PORTAL_EMP_ATD_V_ALL v where emp_id = ? AND TO_CHAR(ATTENDANCE_DATE,'MON-DD-YYYY') = ? " +"order by v.attendance_date asc";
+                                           +"previous_day_out_time from XX_E_PORTAL_EMP_ATD_V_ALL v where emp_id = ? AND TO_CHAR(ATTENDANCE_DATE,'MON-DD-YYYY') = ? order by v.attendance_date asc";
                     
                     String actualWorkedHoursQuery = "select total from xx_e_portal_emp_atd_v atd_v where emp_id = ?  and TO_CHAR(atd_v.in_time,'MON-DD-YYYY') =?";
                     ResultSet rsAttendance = null;
-//                    for (int i=1; i<=31; i++)
+//                    for (int i=21; i<=31; i++)
 //                    {
                     String getPreviousDayRec = "select (TO_CHAR(max_out_time, 'hh12:MI AM')) outtime from xx_e_portal_emp_atd where TO_CHAR (ATTENDANCE_DATE, 'MON-DD-YYYY') = ? and emp_id = ?";
                     
-//                    String formattedDateParam =
-//                        new DateFormatSymbols().getShortMonths()[date.get(Calendar.MONTH)].toUpperCase() +
-//                        "-" +
-//                        (date.get(Calendar.DAY_OF_MONTH) <= 9 ? "0" + date.get(Calendar.DAY_OF_MONTH) :
-//                         date.get(Calendar.DAY_OF_MONTH)) + "-" +
-//                        Calendar.getInstance().get(Calendar.YEAR);
-//                    
-//                    Calendar pc = Calendar.getInstance();
-//                    pc.setTime(date.getTime());
-//                    pc.add(Calendar.DAY_OF_MONTH, -1);
-//                    String formattedPreviousDateParam =
-//                        new DateFormatSymbols().getShortMonths()[pc.get(Calendar.MONTH)].toUpperCase() +
-//                        "-" +
-//                        ((pc.get(Calendar.DAY_OF_MONTH)) <= 9 ? "0" + (pc.get(Calendar.DAY_OF_MONTH)) :
-//                         (pc.get(Calendar.DAY_OF_MONTH))) + "-" +
-//                        pc.get(Calendar.YEAR);
-                        int i = 10;
-                    
-                        String formattedDateParam =
-                        "FEB" +
+                    String formattedDateParam =
+                        new DateFormatSymbols().getShortMonths()[date.get(Calendar.MONTH)].toUpperCase() +
                         "-" +
-                        (i <= 9 ? "0" + i :
-                         i) + "-" +
-                        "2016";
+                        (date.get(Calendar.DAY_OF_MONTH) <= 9 ? "0" + date.get(Calendar.DAY_OF_MONTH) :
+                         date.get(Calendar.DAY_OF_MONTH)) + "-" +
+                        Calendar.getInstance().get(Calendar.YEAR);
                     
                     Calendar pc = Calendar.getInstance();
                     pc.setTime(date.getTime());
-                    //pc.add(Calendar.DAY_OF_MONTH, -1);
+                    pc.add(Calendar.DAY_OF_MONTH, -1);
                     String formattedPreviousDateParam =
-                        "FEB" +
+                        new DateFormatSymbols().getShortMonths()[pc.get(Calendar.MONTH)].toUpperCase() +
                         "-" +
-                        ((i-1) <= 9 ? "0" + (i-1) :
-                         (i-1)) + "-" +
-                        "2016";
+                        ((pc.get(Calendar.DAY_OF_MONTH)) <= 9 ? "0" + (pc.get(Calendar.DAY_OF_MONTH)) :
+                         (pc.get(Calendar.DAY_OF_MONTH))) + "-" +
+                        pc.get(Calendar.YEAR);
+
+//                        int i = 11;
+//                    
+//                        String formattedDateParam =
+//                        "MAY" +
+//                        "-" +
+//                        (i <= 9 ? "0" + i :
+//                         i) + "-" +
+//                        "2016";
+//                    
+//                    Calendar pc = Calendar.getInstance();
+//                    pc.setTime(date.getTime());
+//                    //pc.add(Calendar.DAY_OF_MONTH, -1);
+//                    String formattedPreviousDateParam =
+//                        "MAY" +
+//                        "-" +
+//                        ((i-1) <= 9 ? "0" + (i-1) :
+//                         (i-1)) + "-" +
+//                        "2016";
                     
                     //GETTING PREVIOUS DAY OUT TIME
                     pst = ebsConn.prepareStatement(getPreviousDayRec);
                     pst.setString(1, formattedPreviousDateParam);
                     pst.setString(2, userID);
                     ResultSet rsPrevious = pst.executeQuery();
-                    String previousDayWorking = null;
+                    String previousDayOutTime = null;
                     if (rsPrevious.next()) {
-                        previousDayWorking = rsPrevious.getString("outtime");
+                        previousDayOutTime = rsPrevious.getString("outtime");
                     }
                     
-                    System.out.println("Previous day out time: "+previousDayWorking);
-                    l.logInfo("Previous day out time: "+previousDayWorking);
+                    System.out.println("Previous day out time: "+previousDayOutTime);
+                    l.logInfo("Previous day out time: "+previousDayOutTime);
                     
                     //GETTING CURRENT DAY DATA
                     pst = null;
@@ -141,6 +144,8 @@ public class EventLogger {
                             description = "REGULAR";
                             System.out.println("Regular noted");
                         }
+                        if (leaveToday==null)
+                        {
                         int empID = rsAttendance.getInt("emp_id");
                         String atd_id =
                             rsAttendance.getString("EMP_ATD_ID").toString();
@@ -158,25 +163,68 @@ public class EventLogger {
                         }
                         else
                         {
+                          String maxStartTime = null;
+                          String maxEndTime = null;
+                          String minStartTime = null;
+                          String minEndTime = null;
+                          if (previousDayOutTime == null || empID == 5217 || empID == 226)
+                          {
+                            maxStartTime = rsAttendance.getString("MAX_START_TIME");
+                            maxEndTime = rsAttendance.getString("MAX_END_TIME");
+                            minStartTime =  rsAttendance.getString("START_TIME");
+                            minEndTime = rsAttendance.getString("END_TIME");
+                          }
+                          else
+                          {
+                              previousDayOutTime =
+                                      CommonUtil.subtractTime("6:30 PM", previousDayOutTime).replace("#",":");
+                              int lateSittingMins =
+                                  Integer.parseInt(previousDayOutTime.split(":")[0]) *
+                                  60 +
+                                  Integer.parseInt(previousDayOutTime.split(":")[1]);
+                           //   CommonUtil.log("lateSittings: nadia " + lateSittingMins);
+                              if (lateSittingMins < 60)
+                              {
+                                maxStartTime = rsAttendance.getString("MAX_START_TIME");
+                                maxEndTime = rsAttendance.getString("MAX_END_TIME");
+                                minStartTime =  rsAttendance.getString("START_TIME");
+                                minEndTime = rsAttendance.getString("END_TIME");
+                              }
+                              else
+                              { 
+                                maxEndTime = "5:00 PM";
+                                minEndTime = "5:00 PM";
+                                minStartTime = "9:00 AM";
+                                if (lateSittingMins >= 60 && lateSittingMins <= 149) {
+                                    maxStartTime = "10:30 AM";
+                                } else if (lateSittingMins > 149 &&
+                                           lateSittingMins < 209) {
+                                    maxStartTime = "11:00 AM";
+                                } else if (lateSittingMins > 209) {
+                                    maxStartTime = "11:30 AM";
+                                } 
+                                expectedWorkHours = CommonUtil.subtractTime(maxStartTime, maxEndTime).replace('#', ':');
+                                CommonUtil.log("expected work hours = "+expectedWorkHours);
+                              }
+                          } 
                             lateIn = 
-                                getLateIn(rsAttendance.getString("MAX_START_TIME"),
+                                getLateIn(maxStartTime,
                                           rsAttendance.getTimestamp("MIN_IN_TIME"),
-                                          previousDayWorking,
                                           String.valueOf(empType),
-                                          rsAttendance.getString("EXPECTED_WORK_HOURS"),
+                                          expectedWorkHours,
                                           rsAttendance.getString("EFFECTIVE_WORKED_HOURS") ==
                                           null ? "0:00" :
                                           rsAttendance.getString("EFFECTIVE_WORKED_HOURS"));
                             earlyOut =
                                 getEarlyOut(rsAttendance.getString("INTIME"),
                                             rsAttendance.getString("OUTTIME"),
-                                            rsAttendance.getString("START_TIME"),
-                                            rsAttendance.getString("END_TIME"),
-                                            rsAttendance.getString("MAX_END_TIME"),
-                                            rsAttendance.getString("MAX_START_TIME"),
+                                            minStartTime,
+                                            minEndTime,
+                                            maxEndTime,
+                                            maxStartTime,
                                             rsAttendance.getDate("MAX_OUT_TIME"),
                                             String.valueOf(empType),
-                                            rsAttendance.getString("EXPECTED_WORK_HOURS"),
+                                            expectedWorkHours,
                                             rsAttendance.getString("EFFECTIVE_WORKED_HOURS") ==
                                             null ? "0:00" :
                                             rsAttendance.getString("EFFECTIVE_WORKED_HOURS"));
@@ -191,15 +239,17 @@ public class EventLogger {
                         c.setTime(d);
                         String day =
                             new DateFormatSymbols().getShortWeekdays()[c.get(Calendar.DAY_OF_WEEK)];
-
                         /** LOG ABSENT IF EMPLOYEE HASN'T SWIPED HIS CARD */
                         if (description.equals("Independence Day") || description.equals("Eid Holiday") || description.equals("Public Holiday") || description.equals("SATURDAY_OFF") || description.equals("Ashura") || dayDescription.trim().equals("SUNDAY")) {
                             System.out.println("It's not a regular day so not logging anything.");
                             l.logInfo("It's not a regular day so not logging anything.");
                         }
-                        else if (leaveToday.equals("Y") && leaveType.equals("7")) 
+                        else if (leaveToday !=null)
                         {
+                            if (leaveToday.equals("Y") && leaveType.equals("7")) 
+                            {
                                 System.out.println("Employee is travelling");
+                            }
                         }
                         else
                         {
@@ -288,6 +338,7 @@ public class EventLogger {
                         System.out.println("#####################################################################################################");
                         l.logInfo("####################################################################");
                         }
+                        }
                     }
                     rsAttendance.close();
                     pst.close();
@@ -307,41 +358,36 @@ public class EventLogger {
          ResultSet.HOLD_CURSORS_OVER_COMMIT).executeQuery();
     }
 
-    private String getEarlyOut(String intime, String outtime, String startTime,
-                               String endTime, String maxEndtime,
-                               String maxStartTime, Date maxOutTime,
-                               String empType, String expectedWorkHours,
+    private String getEarlyOut(String intime, 
+                               String outtime, 
+                               String startTime,
+                               String endTime, 
+                               String maxEndtime,
+                               String maxStartTime, 
+                               Date maxOutTime,
+                               String empType, 
+                               String expectedWorkHours,
                                String effectiveWorkHours) {
+      CommonUtil.log("expected hrs = "+expectedWorkHours);
         boolean fullyWorked =
             (Integer.parseInt(expectedWorkHours.split(":")[0]) * 60 +
-             Integer.parseInt(expectedWorkHours.split(":")[1])) ==
+             Integer.parseInt(expectedWorkHours.split(":")[1])) <=
             (Integer.parseInt(effectiveWorkHours.split(":")[0]) * 60 +
              Integer.parseInt(effectiveWorkHours.split(":")[1]));
 //        CommonUtil.log("fully Worked: " + fullyWorked + " emptype: " +
 //                       empType);
-        if (Integer.parseInt(empType) != 1 && fullyWorked) {
+        if (fullyWorked) {
             //CommonUtil.log("Person is a part timer");
             return null;
         } else {
             if (maxOutTime != null) {
-                //                    String intime = "10:32 AM";
-                //                    String startTime = "8:30 AM";
-                //                    String maxStartTime = "10:00 AM";
-                //                    String outtime = "10:32 AM";
-                //                    String maxEndtime = "6:00 PM";
-                //                    String endTime = "4:30 PM";
-
-                //            String intime = getIntime();
-                //            String startTime = getStartTime();
-                //            String outtime = getOuttime();
-                //            String maxEndtime = getMaxEndTime();
-                //            String maxStartTime = getMaxStartTime();
-                //            String endTime = getEndTime();
-
+            CommonUtil.log("startTime = " + startTime);
                 String diff_intime_and_startTime =
                     CommonUtil.subtractTime(intime, startTime);
+              System.out.println("maxStartTime = "+maxStartTime);
                 String diff_intime_and_maxStartTime =
                     CommonUtil.subtractTime(intime, maxStartTime);
+                System.out.println("maxEndtime = "+maxEndtime);
                 String diff_intime_and_maxEndTime =
                     CommonUtil.subtractTime(intime, maxEndtime);
 
@@ -355,6 +401,7 @@ public class EventLogger {
                                                                           ":").split(":")[0]) +
                     Integer.parseInt(diff_intime_and_maxStartTime.replace("#",
                                                                           ":").split(":")[1]);
+                System.out.println("diff_intime_and_maxEndTime = "+diff_intime_and_maxEndTime);
                 int min_diff_intime_and_maxEndTime =
                     Integer.parseInt(diff_intime_and_maxEndTime.replace("#",
                                                                         ":").split(":")[0]) +
@@ -368,13 +415,13 @@ public class EventLogger {
                 } else {
                     if (min_diff_intime_and_startTime <= 0 &&
                         min_diff_intime_and_maxStartTime >= 0) {
-//                        System.out.println("Case#1 " +
-//                                           CommonUtil.addHourToAmPMTime(intime.split(" ")[0],
-//                                                                        expectedWorkHours) +
-//                                           " - " + outtime);
+                        System.out.println("Case#1 " +
+                                           CommonUtil.addHourToAmPMTime(intime.split(" ")[0],
+                                                                        expectedWorkHours) +
+                                           " - " + outtime);
                         earlyOut =
                                 CommonUtil.limitSubtractTime(outtime, CommonUtil.addHourToAmPMTime(intime.split(" ")[0],
-                                                                                                   "8:00") +
+                                                                                                   expectedWorkHours) +
                                                              " PM");
                     } else if (min_diff_intime_and_startTime > 0) {
                 //        System.out.println("Case#2 "+endTime + " - " + outtime);
@@ -395,17 +442,16 @@ public class EventLogger {
 
     }
 
-    private String getLateIn(String pMaxStartTime, Date pMinInTime,
-                             String previousDayOutTime, String empType,
+    private String getLateIn(String pMaxStartTime, 
+                             Date pMinInTime,
+                             String empType,
                              String expectedWorkHours,
                              String effectiveWorkHours) {
-        //System.out.println("Hhhhhhhhhhhhh: "+previousDayOutTime);
         String workAfterOfficeTimings = "";
-        String previousDayTime =
-            previousDayOutTime != null ? previousDayOutTime.toString() : null;
+        CommonUtil.log("Max Start Time = "+pMaxStartTime);
         boolean fullyWorked =
             (Integer.parseInt(expectedWorkHours.split(":")[0]) * 60 +
-             Integer.parseInt(expectedWorkHours.split(":")[1])) ==
+             Integer.parseInt(expectedWorkHours.split(":")[1])) <=
             (Integer.parseInt(effectiveWorkHours.split(":")[0]) * 60 +
              Integer.parseInt(effectiveWorkHours.split(":")[1]));
 //        CommonUtil.log("fully Worked: " + fullyWorked + " emptype: " +
@@ -425,34 +471,9 @@ public class EventLogger {
                 String minInTime =
                     timeStringWithAmPm.split(" ")[1] + " " + timeStringWithAmPm.split(" ")[2];
                // System.out.println("min in time: " + minInTime);
-                String maxInFlexiC = "";
-                if (previousDayOutTime != null) {
-                    workAfterOfficeTimings =
-                            CommonUtil.subtractTime("6:30 PM", previousDayTime).replace("#",
-                                                                                        ":");
-                    int lateSittingMins =
-                        Integer.parseInt(workAfterOfficeTimings.split(":")[0]) *
-                        60 +
-                        Integer.parseInt(workAfterOfficeTimings.split(":")[1]);
-                 //   CommonUtil.log("lateSittings: nadia " + lateSittingMins);
-                    if (lateSittingMins >= 60 && lateSittingMins <= 149) {
-                        maxInFlexiC = "10:30 AM";
-                    } else if (lateSittingMins > 149 &&
-                               lateSittingMins < 209) {
-                        maxInFlexiC = "11:00 AM";
-                    } else if (lateSittingMins > 209) {
-                        maxInFlexiC = "11:30 AM";
-                    } else 
-                    {
-                        maxInFlexiC = pMaxStartTime;
-                    }
-                } else {
-                    maxInFlexiC = pMaxStartTime;
-                }
-
-                //CommonUtil.log("Nadia: " + maxInFlexiC + " and " + minInTime);
+                CommonUtil.log("minInTime = " + minInTime);
                 String lateIn =
-                    CommonUtil.limitSubtractTime(maxInFlexiC, minInTime); //minInTime - maxInFlexi+someFigure
+                    CommonUtil.limitSubtractTime(pMaxStartTime, minInTime); //minInTime - maxInFlexi+someFigure
                 //CommonUtil.log("naida: " + lateIn);
                 return lateIn.replace("#", ":");
             } else {
@@ -553,8 +574,7 @@ public class EventLogger {
                 id = pstLogMissingMins.executeUpdate();
         }
         catch(SQLException e) 
-        {
-            
+        {           
         }
         return id;
     }

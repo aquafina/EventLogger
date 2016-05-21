@@ -42,6 +42,7 @@ public class CommonUtil {
             java.util.Date d1 = formatter.parse(time1);
             java.util.Date d2 = formatter.parse(time2);
             long timeDiff = d2.getTime() - d1.getTime();
+          System.out.println("Everything good till here 1");
             //CommonUtil.log("nadia : "+timeDiff);
             long diffMinutes = timeDiff / (60 * 1000) % 60;
             //CommonUtil.log("nadia : "+diffMinutes);

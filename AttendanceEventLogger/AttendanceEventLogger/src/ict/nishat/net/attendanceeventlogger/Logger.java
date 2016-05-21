@@ -12,8 +12,8 @@ import javax.servlet.http.HttpSession;
 
 
 public class Logger {
-//    String rootFolderPath = "//home//oracle//Desktop//AttendaceIrregularities";
-    String rootFolderPath = "C://AttendanceIrregularities";
+    String rootFolderPath = "//home//oracle//Desktop//AttendaceIrregularities";
+//    String rootFolderPath = "C://AttendanceIrregularities";
     File rootFolder;
     PrintWriter pw ;
     
@@ -24,7 +24,6 @@ public class Logger {
         if (!rootFolder.exists()) {
             rootFolder.mkdir();
         }
-        
     }
 
     public void logInfo(String line)throws Exception {
