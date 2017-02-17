@@ -30,7 +30,9 @@ public class CommonUtil {
 
     public static final String CURR_MONTH_NAME = "month_name";
     public static final String CURR_MONTH_DAYS = "month_days";
-
+    public static long ramadanExpectedWorkTime = 390;
+    public static long normalExpectedWorkTime = 480;
+    public static boolean IS_RAMADAN = false;
     public static String limitSubtractTime(String time1, String time2) {
         
         //CommonUtil.log(time1+" nadia "+ time2);
@@ -43,25 +45,32 @@ public class CommonUtil {
             java.util.Date d2 = formatter.parse(time2);
             long timeDiff = d2.getTime() - d1.getTime();
           System.out.println("Everything good till here 1");
-            //CommonUtil.log("nadia : "+timeDiff);
+            CommonUtil.log("timeDiff : "+timeDiff);
             long diffMinutes = timeDiff / (60 * 1000) % 60;
-            //CommonUtil.log("nadia : "+diffMinutes);
+            CommonUtil.log("diffMinutes : "+diffMinutes);
             long diffHours = timeDiff / (60 * 60 * 1000) % 24;
-            //CommonUtil.log("nadia : "+diffHours);
+            CommonUtil.log("diffHours : "+diffHours);
             long totalMin = (diffHours * 60) + diffMinutes;
-            //CommonUtil.log("nadia total mis"+totalMin);
+            CommonUtil.log("totalMins"+totalMin);
             if (totalMin <= 0) {
                 diffHours = 0;
                 diffMinutes = 0;
             }
-            if (totalMin >= 480) {
+          if (!IS_RAMADAN)
+          {
+            if (totalMin >= normalExpectedWorkTime) {
                 diffHours = 8;
-                diffMinutes = 0;
+                diffMinutes = 00;
             }
-
-
+          }
+          else
+          {
+            if (totalMin >= ramadanExpectedWorkTime) {
+                diffHours = 6;
+                diffMinutes = 30;
+            }
+          }
             difference = diffHours + "#" + diffMinutes;
-
         } catch (Exception e) {
             difference = "";
             e.printStackTrace();
